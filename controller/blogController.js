@@ -1,25 +1,61 @@
 import Blog from '../models/blogModel.js';
-import fs from 'fs';
+import cloudinary from '../config/cloudinary.js';
 
 export const uploadBlog = async (req, res) => {
-    const { name, date, title, category } = req.body;
+  const { name, date, title, category } = req.body;
 
-    try {
-        const blogData = new Blog({
-            name,
-            date,
-            title,
-            category,
-            videoPath: req.file.path,
+  try {
+    let uploadedVideo = null;
+
+    if (req.file) {
+      // 1) Validate it’s a video
+      if (!req.file.mimetype.startsWith('video/')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Only video files are allowed'
         });
+      }
 
-        const response = await blogData.save();
-        console.log(response);
-        res.status(200).json({ success: true, message: "successfully uploaded", response });
-    } catch (error) {
-        res.status(500).json({ success: false, message: "upload failed", error: error.message });
+      // 2) Upload **unsigned** via your preset
+      uploadedVideo = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.unsigned_upload_stream(
+          'blog_video_preset',        
+          { resource_type: 'video' }, 
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        stream.end(req.file.buffer);
+      });
     }
+
+    // 3) Save to Mongo
+    const blog = new Blog({
+      name,
+      date,
+      title,
+      category,
+      videoPath: uploadedVideo?.secure_url || null
+    });
+    const saved = await blog.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Successfully uploaded (unsigned)',
+      data: saved
+    });
+
+  } catch (err) {
+    console.error('Upload failed:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Upload failed',
+      error: err.message
+    });
+  }
 };
+
 
 export const getBlog = async (req, res) => {
     try {

@@ -1,15 +1,10 @@
 import Consult from "../models/consultModel.js";
-import User from "../models/userModel.js"
 
 export const bookConsult = async(req, res) =>{
     try {
-        const {name, email, phoneNo, message} = req.body;
-        const verifyEmail = await User.findOne({email});
-        if(!verifyEmail){
-            return res.status(404).json({success: false, message:"Email id not found"})
-        }
+        const {name, email, mobile, message} = req.body;
         const consultData = new Consult({
-            name, email, phoneNo, message
+            name, email, mobile, message
         })
 
         const response = await consultData.save();        

@@ -9,7 +9,7 @@ const consultSchema = mongoose.Schema({
         type: String,
         required: true,
     },
-    phoneNo:{
+    mobile:{
         type: String,
         required: true,
     },
